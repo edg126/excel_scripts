@@ -65,7 +65,7 @@ Dim lastCol As Long
 Dim lastRow As Long
 Dim currentRow As Long   'keeps track of the current row value while looping to build the insert statements
 Dim headerCheck As Long  'answer to the prompt of if there is a header
-Dim largeRecordCheck As Long 'answer to the prompt on if you want to continue if there is a large row size
+
 
 lastCol = GetLastColumn(ActiveWorkbook.Name, ActiveSheet.Name)
 
@@ -80,7 +80,7 @@ sqlTable = InputBox("Enter Table Name (Prefix # for temporary table)", "SQLServe
 
 headerCheck = MsgBox("Does file contain a header?", 3)
    If headerCheck = vbNo Then
-      BuildHeaderColumns (lastCol)
+      Call BuildHeaderColumns(lastCol)
    ElseIf headerCheck = 2 Then '2 = cancel
       Exit Sub
    End If
@@ -88,12 +88,12 @@ headerCheck = MsgBox("Does file contain a header?", 3)
 
 'we want to get the last row after the headerCheck, since that class inserts a new row
 lastRow = GetLastRow(ActiveWorkbook.Name, ActiveSheet.Name)
-If lastRow > 500000 Then
-   largeRecordCheck = MsgBox("The row count, " + CStr(lastRow) + " is large, are you sure you want to continue?", vbYesNo)
-   If largeRecordCheck = vbNo Then
-      Exit Sub
-   End If
-End If
+
+
+
+'Check to see if there are a lot of records for this process to handle
+Call CheckForLargeInserts(lastRow, lastCol)
+
 
    
 
@@ -118,7 +118,22 @@ MsgBox "Insert statements have been copied to the clipboard, paste into Sql Serv
    
 
 End Sub
+Private Sub CheckForLargeInserts(lastRow As Long, lastCol As Long)
+'While this function will work on any record size, excel can have issues with large volumes, and there might be constraints in the database with the volume of records.
+'If you are using significant volumes of data, you should probably use a better tool than this.
 
+
+Dim largeRecordCheck As Long 'answer to the prompt on if you want to continue if there is a large row size
+
+
+If lastRow * lastCol > 1000000 Then
+   largeRecordCheck = MsgBox("The row count, " + CStr(lastRow) + " is large, are you sure you want to continue?  It's strongly recommmended you use another method of loading data", vbYesNo)
+   If largeRecordCheck = vbNo Then
+      End ' exit program
+   End If
+End If
+
+End Sub
  
 Function GetLastColumn(wbName As String, wsName As String)
 'This function returns the last column that has populated values in it, regardless of the amount of blank lines in between
@@ -151,7 +166,7 @@ GetLastColumn = lCol
 
 
 End Function
-Sub BuildHeaderColumns(colNum As Long)
+Private Sub BuildHeaderColumns(colNum As Long)
 'Insert a row
 'Populate a header column with format COLUMN_<columnnumber>
 
