@@ -64,7 +64,10 @@ Dim sqlTable As String
 Dim lastCol As Long
 Dim lastRow As Long
 Dim currentRow As Long   'keeps track of the current row value while looping to build the insert statements
+Dim currentColumn As Long
 Dim headerCheck As Long  'answer to the prompt of if there is a header
+Dim maxColumnLength() As Long
+Dim columnLength As Long
 
 
 lastCol = GetLastColumn(ActiveWorkbook.Name, ActiveSheet.Name)
@@ -88,24 +91,34 @@ headerCheck = MsgBox("Does file contain a header?", 3)
 
 'we want to get the last row after the headerCheck, since that class inserts a new row
 lastRow = GetLastRow(ActiveWorkbook.Name, ActiveSheet.Name)
+ReDim maxColumnLength(1 To lastCol) As Long
 
 
+ 
 
 'Check to see if there are a lot of records for this process to handle
 Call CheckForLargeInserts(lastRow, lastCol)
 
 
-   
-
-'build the header statement
-ActiveSheet.Cells(1, lastCol + 1) = buildHeaderString(sqlTable, lastCol, ActiveWorkbook.Name, ActiveSheet.Name)
-
-
 
 'build the insert statements
 For currentRow = 2 To lastRow
+     For currentColumn = 1 To lastCol
+         columnLength = 0
+         columnLength = Len(ActiveWorkbook.ActiveSheet.Cells(currentRow, currentColumn).Value)
+         
+          If columnLength > maxColumnLength(currentColumn) Then
+             maxColumnLength(currentColumn) = columnLength
+          End If
+          
+     Next currentColumn
+     
    ActiveSheet.Cells(currentRow, lastCol + 1).Value = buildInsertString(sqlTable, lastCol, currentRow, ActiveWorkbook.Name, ActiveSheet.Name)
+   
 Next currentRow
+
+'build the header statement
+Call buildCreateStatement(sqlTable, lastCol, ActiveWorkbook.Name, ActiveSheet.Name, maxColumnLength)
 
 'build the last line that will show the table output
 ActiveSheet.Cells(lastRow + 1, lastCol + 1).Value = "SELECT TOP 200 * FROM " + sqlTable
@@ -210,14 +223,12 @@ Function GetLastRow(wbName As String, wsName As String)
     
     GetLastRow = lRow
 End Function
-Function buildHeaderString(sqlTable As String, colNum As Long, wbName As String, wsName As String)
+Private Sub buildCreateStatement(sqlTable As String, colNum As Long, wbName As String, wsName As String, maxColumnLength() As Long)
 'builds the create table output string based off of the header
   
   Dim headerString As String
   Dim i As Long
   Dim ws As Worksheet
-  
-  
   
   headerString = "Create table " + sqlTable + " ("
 
@@ -226,14 +237,14 @@ Function buildHeaderString(sqlTable As String, colNum As Long, wbName As String,
         headerString = headerString + ","
      End If
 '     headerString = headerString + "[" + ActiveSheet.Cells(1, i).Text + "] varchar(max) "
-     headerString = headerString + "[" + Workbooks(wbName).Sheets(wsName).Cells(1, i).Text + "] varchar(max) "
+     headerString = headerString + "[" + Replace(Workbooks(wbName).Sheets(wsName).Cells(1, i).Text, "'", "''") + "] varchar(" + CStr(maxColumnLength(i)) + ") "
   Next i
 
   headerString = headerString + ")"
 
-
-  buildHeaderString = headerString
-End Function
+Workbooks(wbName).Sheets(wsName).Cells(1, colNum + 1) = headerString
+  
+End Sub
 
 
 Function buildInsertString(sqlTable As String, colNum As Long, currentRow As Long, wbName As String, wsName As String)
@@ -241,15 +252,17 @@ Function buildInsertString(sqlTable As String, colNum As Long, currentRow As Lon
 
    Dim insertString As String
    Dim i As Long
-
+   Dim insertCell As String
+   
    insertString = "Insert into " + sqlTable + " Values("
 
    For i = 1 To colNum
       If i <> 1 Then
          insertString = insertString + ","
       End If
-      'insertString = insertString + "'" + ActiveSheet.Cells(currentRow, i).Text + "'"
-      insertString = insertString + "'" + Workbooks(wbName).Sheets(wsName).Cells(currentRow, i).Text + "'"
+      
+            
+      insertString = insertString + "'" + Replace(Workbooks(wbName).Sheets(wsName).Cells(currentRow, i).Text, "'", "''") + "'"
    Next i
 
    insertString = insertString + ")"
