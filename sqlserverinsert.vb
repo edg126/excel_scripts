@@ -7,7 +7,6 @@ Sub SQL_Server_Create_inserts()
 ' v1.0 created 11/9/2015 by Ed Gallagher
 ' edg126@gmail.com
 ' blog: http://edgallagher.blogspot.com/
-' youtube: https://www.youtube.com/channel/UCYawjh7ZmUKjPUywPEeNF3w/feed
 ' this sub will append to the end of a dataset the create table and insert statements for a data set
 'example: these columns and rows in an excel file:
 'A B C
